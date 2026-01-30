@@ -1,5 +1,5 @@
-/*
- * Host Mouse -> Device Mouse bridge
+/
+ *Host Mouse -> Device Mouse bridge
  * RP2040 + Pico-PIO-USB + TinyUSB
  * Mouse buttons + X/Y + WHEEL FUNCIONANDO
  */
@@ -126,3 +126,4 @@ void tuh_hid_report_received_cb(uint8_t dev_addr,
   // pedir siguiente reporte
   tuh_hid_receive_report(dev_addr, instance);
 }
+
