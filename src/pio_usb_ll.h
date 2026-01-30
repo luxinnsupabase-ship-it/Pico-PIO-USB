@@ -1,6 +1,6 @@
 /**
  * Copyright (c) 2021 sekigon-gonnoc
- *                    Ha Thach (thach@tinyusb.org)
+ *                    Ha Tach (thach@tinyusb.org)
  */
 
 #pragma once
