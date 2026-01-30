@@ -1,8 +1,6 @@
 /*
- * The MIT License (MIT)
- *
- * Copyright (c) 2019 Ha Thach (tinyusb.org)
- *                    sekigon-gonnoc
+ * TinyUSB HID Mouse with REAL Wheel
+ * RP2040 Mouse Bridge
  */
 
 #include "tusb.h"
@@ -45,18 +43,59 @@ tusb_desc_device_t const desc_device =
   .bNumConfigurations = 0x01
 };
 
-uint8_t const * tud_descriptor_device_cb(void)
+uint8_t const* tud_descriptor_device_cb(void)
 {
-  return (uint8_t const *) &desc_device;
+  return (uint8_t const*) &desc_device;
 }
 
 //--------------------------------------------------------------------+
-// HID Report Descriptor (MOUSE)
+// 🔥 HID REPORT DESCRIPTOR (MOUSE + WHEEL REAL)
 //--------------------------------------------------------------------+
 
 uint8_t const desc_hid_report[] =
 {
-  TUD_HID_REPORT_DESC_MOUSE()
+  0x05, 0x01,        // Usage Page (Generic Desktop)
+  0x09, 0x02,        // Usage (Mouse)
+  0xA1, 0x01,        // Collection (Application)
+
+  0x09, 0x01,        //   Usage (Pointer)
+  0xA1, 0x00,        //   Collection (Physical)
+
+  // Buttons (3)
+  0x05, 0x09,        //     Usage Page (Button)
+  0x19, 0x01,
+  0x29, 0x03,
+  0x15, 0x00,
+  0x25, 0x01,
+  0x95, 0x03,
+  0x75, 0x01,
+  0x81, 0x02,
+
+  // Padding
+  0x95, 0x01,
+  0x75, 0x05,
+  0x81, 0x03,
+
+  // X, Y
+  0x05, 0x01,
+  0x09, 0x30,
+  0x09, 0x31,
+  0x15, 0x81,        // -127
+  0x25, 0x7F,        // 127
+  0x75, 0x08,
+  0x95, 0x02,
+  0x81, 0x06,
+
+  // 🔥 WHEEL 🔥
+  0x09, 0x38,        // Usage (Wheel)
+  0x15, 0x81,
+  0x25, 0x7F,
+  0x75, 0x08,
+  0x95, 0x01,
+  0x81, 0x06,
+
+  0xC0,
+  0xC0
 };
 
 //--------------------------------------------------------------------+
@@ -81,10 +120,8 @@ enum
 
 uint8_t const desc_fs_configuration[] =
 {
-  // Config number, interface count, string index, total length, attributes, power
   TUD_CONFIG_DESCRIPTOR(1, ITF_NUM_TOTAL, 0, CONFIG_TOTAL_LEN, 0x00, 100),
 
-  // CDC
   TUD_CDC_DESCRIPTOR(
     ITF_NUM_CDC,
     4,
@@ -95,7 +132,6 @@ uint8_t const desc_fs_configuration[] =
     64
   ),
 
-  // HID Mouse
   TUD_HID_DESCRIPTOR(
     ITF_NUM_HID,
     5,
@@ -103,11 +139,11 @@ uint8_t const desc_fs_configuration[] =
     sizeof(desc_hid_report),
     EPNUM_HID_IN,
     16,
-    10
+    1
   ),
 };
 
-uint8_t const * tud_descriptor_configuration_cb(uint8_t index)
+uint8_t const* tud_descriptor_configuration_cb(uint8_t index)
 {
   (void) index;
   return desc_fs_configuration;
@@ -117,24 +153,10 @@ uint8_t const * tud_descriptor_configuration_cb(uint8_t index)
 // HID Callbacks
 //--------------------------------------------------------------------+
 
-uint8_t const * tud_hid_descriptor_report_cb(uint8_t instance)
+uint8_t const* tud_hid_descriptor_report_cb(uint8_t instance)
 {
   (void) instance;
   return desc_hid_report;
-}
-
-uint16_t tud_hid_get_report_cb(uint8_t instance,
-                               uint8_t report_id,
-                               hid_report_type_t report_type,
-                               uint8_t* buffer,
-                               uint16_t reqlen)
-{
-  (void) instance;
-  (void) report_id;
-  (void) report_type;
-  (void) buffer;
-  (void) reqlen;
-  return 0;
 }
 
 void tud_hid_set_report_cb(uint8_t instance,
@@ -156,12 +178,12 @@ void tud_hid_set_report_cb(uint8_t instance,
 
 char const* string_desc_arr[] =
 {
-  (const char[]) { 0x09, 0x04 }, // 0: English
-  "TinyUSB",                    // 1: Manufacturer
-  "RP2040 Mouse Bridge",        // 2: Product
-  "RP2040-0001",                // 3: Serial
-  "TinyUSB CDC",                // 4: CDC Interface
-  "TinyUSB HID Mouse"           // 5: HID Interface
+  (const char[]) { 0x09, 0x04 },
+  "TinyUSB",
+  "RP2040 Mouse Bridge",
+  "RP2040-0001",
+  "TinyUSB CDC",
+  "TinyUSB HID Mouse"
 };
 
 static uint16_t _desc_str[32];
@@ -171,26 +193,24 @@ uint16_t const* tud_descriptor_string_cb(uint8_t index, uint16_t langid)
   (void) langid;
   uint8_t chr_count;
 
-  if ( index == 0 )
+  if (index == 0)
   {
     memcpy(&_desc_str[1], string_desc_arr[0], 2);
     chr_count = 1;
   }
   else
   {
-    if ( index >= sizeof(string_desc_arr) / sizeof(string_desc_arr[0]) )
+    if (index >= sizeof(string_desc_arr)/sizeof(string_desc_arr[0]))
       return NULL;
 
     const char* str = string_desc_arr[index];
     chr_count = strlen(str);
-    if ( chr_count > 31 ) chr_count = 31;
+    if (chr_count > 31) chr_count = 31;
 
-    for(uint8_t i = 0; i < chr_count; i++)
-    {
+    for (uint8_t i = 0; i < chr_count; i++)
       _desc_str[1 + i] = str[i];
-    }
   }
 
-  _desc_str[0] = (TUSB_DESC_STRING << 8 ) | (2 * chr_count + 2);
+  _desc_str[0] = (TUSB_DESC_STRING << 8) | (2 * chr_count + 2);
   return _desc_str;
 }
