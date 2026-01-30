@@ -1,58 +1,6 @@
-name: Build
-
-on:
-  pull_request:
-  push:
-  release:
-    types:
-      - created
-
-env:
-  PICO_SDK_PATH: ${{ github.workspace }}/pico-sdk
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Install ARM GCC
-      uses: carlosperate/arm-none-eabi-gcc-action@v1
-      with:
-        release: '12.3.Rel1'
-
-    - name: Checkout
-      uses: actions/checkout@v4
-
-    - name: Checkout pico-sdk
-      uses: actions/checkout@v4
-      with:
-        repository: raspberrypi/pico-sdk
-        ref: '2.1.0' # Usamos la versión más reciente del SDK de forma fija
-        path: pico-sdk
-
-    - name: Checkout TinyUSB
-      run: |
-        git -C $PICO_SDK_PATH submodule update --init
-        git -C $PICO_SDK_PATH/lib/tinyusb fetch
-        git -C $PICO_SDK_PATH/lib/tinyusb checkout master
-
-    - name: Build
-      run: |
-        mkdir -p examples/build
-        cd examples/build
-        cmake -DPICO_BOARD=pico ..
-        make
-
-    - uses: actions/upload-artifact@v4
-      with:
-        name: example_binaries-pico
-        path: |
-          examples/build/usb_device/usb_device.uf2
-          examples/build/usb_device/usb_device.hex
-          examples/build/host_hid_to_device_cdc/host_hid_to_device_cdc.uf2
-          examples/build/host_hid_to_device_cdc/host_hid_to_device_cdc.hex
-
   build-arduino:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -75,4 +23,7 @@ jobs:
           ln -s $GITHUB_WORKSPACE $HOME/Arduino/libraries/
 
       - name: Build
-        run: arduino-cli compile --fqbn rp2040:rp2040:rpipico:usbstack=tinyusb examples/arduino/device_info
+        run: |
+          arduino-cli compile \
+            --fqbn rp2040:rp2040:rpipico:usbstack=tinyusb \
+            examples/arduino/device_info
