@@ -94,21 +94,14 @@ void tuh_hid_report_received_cb(uint8_t dev_addr,
 
   uint8_t proto = tuh_hid_interface_protocol(dev_addr, instance);
 
-  if (proto == HID_ITF_PROTOCOL_MOUSE)
+  if (proto == HID_ITF_PROTOCOL_MOUSE && len >= 3)
   {
-    int8_t buttons = report[0];
-    int8_t x = 0;
-    int8_t y = 0;
-    int8_t wheel = 0;
+    uint8_t buttons = report[0];
+    int8_t  x       = (int8_t) report[1];
+    int8_t  y       = (int8_t) report[2];
+    int8_t  wheel   = 0;
 
-    // Movimiento
-    if (len >= 3)
-    {
-      x = (int8_t) report[1];
-      y = (int8_t) report[2];
-    }
-
-    // 🔥 RUEDITA (SCROLL) 🔥
+    // RUEDITA (scroll)
     if (len >= 4)
     {
       wheel = (int8_t) report[3];
@@ -122,7 +115,7 @@ void tuh_hid_report_received_cb(uint8_t dev_addr,
         x,        // X
         y,        // Y
         wheel,    // WHEEL ✅
-        0         // pan (horizontal)
+        0         // pan
       );
     }
   }
