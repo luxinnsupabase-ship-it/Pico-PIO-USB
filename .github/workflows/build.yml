@@ -12,20 +12,6 @@ env:
 
 jobs:
   build:
-    strategy:
-      fail-fast: false
-      matrix:
-        board:
-          - 'pico'
-          - 'pico2'
-        sdk_version:
-          - '2.1.0'
-          - '2.0.0'
-          - '1.5.1'
-        exclude:
-          # pico2 is supported from sdk 2.0.0
-          - sdk_version: '1.5.1'
-            board: 'pico2'
     runs-on: ubuntu-latest
     steps:
     - name: Install ARM GCC
@@ -40,12 +26,11 @@ jobs:
       uses: actions/checkout@v4
       with:
         repository: raspberrypi/pico-sdk
-        ref: ${{ matrix.sdk_version }}
+        ref: '2.1.0' # Usamos la versión más reciente del SDK de forma fija
         path: pico-sdk
 
     - name: Checkout TinyUSB
       run: |
-        # checkout tinyusb in pico-sdk and switch to master branch
         git -C $PICO_SDK_PATH submodule update --init
         git -C $PICO_SDK_PATH/lib/tinyusb fetch
         git -C $PICO_SDK_PATH/lib/tinyusb checkout master
@@ -54,12 +39,12 @@ jobs:
       run: |
         mkdir -p examples/build
         cd examples/build
-        cmake -DPICO_BOARD=${{ matrix.board }} ..
+        cmake -DPICO_BOARD=pico ..
         make
 
     - uses: actions/upload-artifact@v4
       with:
-        name: example_binaries-${{ matrix.board }}-sdk-${{ matrix.sdk_version }}
+        name: example_binaries-pico
         path: |
           examples/build/usb_device/usb_device.uf2
           examples/build/usb_device/usb_device.hex
@@ -67,13 +52,6 @@ jobs:
           examples/build/host_hid_to_device_cdc/host_hid_to_device_cdc.hex
 
   build-arduino:
-    strategy:
-      fail-fast: false
-      matrix:
-        board:
-          - 'rpipico'
-          - 'rpipico2'
-
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -81,11 +59,8 @@ jobs:
 
       - name: Install Arduino CLI
         run: |
-          # make all our directories we need for files and libraries
-          mkdir $HOME/.arduino15
-          mkdir $HOME/.arduino15/packages
-          mkdir $HOME/Arduino
-          mkdir $HOME/Arduino/libraries
+          mkdir -p $HOME/.arduino15/packages
+          mkdir -p $HOME/Arduino/libraries
           curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh | sh
           echo $GITHUB_WORKSPACE/bin >> $GITHUB_PATH
 
@@ -94,14 +69,10 @@ jobs:
           BSP_URL: https://github.com/earlephilhower/arduino-pico/releases/download/global/package_rp2040_index.json
         run: |
           arduino-cli config init
-          arduino-cli core update-index
           arduino-cli core update-index --additional-urls $BSP_URL
           arduino-cli core install rp2040:rp2040 --additional-urls $BSP_URL
           arduino-cli lib install "Adafruit TinyUSB Library"
-          # symlink our to libraries folder
           ln -s $GITHUB_WORKSPACE $HOME/Arduino/libraries/
-          # Library summary
-          arduino-cli lib list
 
       - name: Build
-        run: arduino-cli compile --fqbn rp2040:rp2040:${{ matrix.board }}:usbstack=tinyusb examples/arduino/device_info
+        run: arduino-cli compile --fqbn rp2040:rp2040:rpipico:usbstack=tinyusb examples/arduino/device_info
