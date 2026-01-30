@@ -44,41 +44,13 @@ int main(void)
 
   multicore_launch_core1(core1_main);
 
-  // Device stack (mouse)
+  // USB DEVICE (mouse) – descriptors vienen de usb_descriptors.c
   tud_init(0);
 
   while (true)
   {
     tud_task();
   }
-}
-
-// --------------------------------------------------------------------
-// USB DEVICE HID (MOUSE)
-// --------------------------------------------------------------------
-
-uint8_t const desc_hid_report[] =
-{
-  TUD_HID_REPORT_DESC_MOUSE()
-};
-
-uint8_t const * tud_hid_descriptor_report_cb(uint8_t instance)
-{
-  (void) instance;
-  return desc_hid_report;
-}
-
-void tud_hid_set_report_cb(uint8_t instance,
-                           uint8_t report_id,
-                           hid_report_type_t report_type,
-                           uint8_t const* buffer,
-                           uint16_t bufsize)
-{
-  (void) instance;
-  (void) report_id;
-  (void) report_type;
-  (void) buffer;
-  (void) bufsize;
 }
 
 // --------------------------------------------------------------------
@@ -108,7 +80,7 @@ void tuh_hid_umount_cb(uint8_t dev_addr, uint8_t instance)
 }
 
 // --------------------------------------------------------------------
-// 🔑 LA PIEZA FINAL: PUENTE HOST → DEVICE
+// 🔑 PUENTE HOST → DEVICE (LA CLAVE)
 // --------------------------------------------------------------------
 
 void tuh_hid_report_received_cb(uint8_t dev_addr,
