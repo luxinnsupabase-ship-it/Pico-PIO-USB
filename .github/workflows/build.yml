@@ -1,29 +1,49 @@
-  build-arduino:
+name: Build RP2040 Pico
+
+on:
+  push:
+  pull_request:
+
+env:
+  PICO_SDK_PATH: ${{ github.workspace }}/pico-sdk
+
+jobs:
+  build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+    - name: Install ARM GCC
+      uses: carlosperate/arm-none-eabi-gcc-action@v1
+      with:
+        release: '12.3.Rel1'
 
-      - name: Install Arduino CLI
-        run: |
-          mkdir -p $HOME/.arduino15/packages
-          mkdir -p $HOME/Arduino/libraries
-          curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh | sh
-          echo $GITHUB_WORKSPACE/bin >> $GITHUB_PATH
+    - name: Checkout repo
+      uses: actions/checkout@v4
 
-      - name: Install BSP and Libraries
-        env:
-          BSP_URL: https://github.com/earlephilhower/arduino-pico/releases/download/global/package_rp2040_index.json
-        run: |
-          arduino-cli config init
-          arduino-cli core update-index --additional-urls $BSP_URL
-          arduino-cli core install rp2040:rp2040 --additional-urls $BSP_URL
-          arduino-cli lib install "Adafruit TinyUSB Library"
-          ln -s $GITHUB_WORKSPACE $HOME/Arduino/libraries/
+    - name: Checkout pico-sdk
+      uses: actions/checkout@v4
+      with:
+        repository: raspberrypi/pico-sdk
+        ref: 2.1.0
+        path: pico-sdk
 
-      - name: Build
-        run: |
-          arduino-cli compile \
-            --fqbn rp2040:rp2040:rpipico:usbstack=tinyusb \
-            examples/arduino/device_info
+    - name: Init TinyUSB
+      run: |
+        git -C pico-sdk submodule update --init
+        git -C pico-sdk/lib/tinyusb fetch
+        git -C pico-sdk/lib/tinyusb checkout master
+
+    - name: Build examples
+      run: |
+        mkdir -p examples/build
+        cd examples/build
+        cmake -DPICO_BOARD=pico ..
+        make -j$(nproc)
+
+    - name: Upload UF2
+      uses: actions/upload-artifact@v4
+      with:
+        name: pico-uf2
+        path: |
+          examples/build/**/*.uf2
+          examples/build/**/*.hex
