@@ -71,6 +71,9 @@ void tuh_hid_mount_cb(uint8_t dev_addr,
 
   if (proto == HID_ITF_PROTOCOL_MOUSE)
   {
+    // 🔥 CLAVE: FORZAR REPORT PROTOCOL PARA QUE LA RUEDA FUNCIONE
+    tuh_hid_set_protocol(dev_addr, instance, HID_PROTOCOL_REPORT);
+
     tuh_hid_receive_report(dev_addr, instance);
   }
 }
@@ -101,7 +104,7 @@ void tuh_hid_report_received_cb(uint8_t dev_addr,
     int8_t  y       = (int8_t) report[2];
     int8_t  wheel   = 0;
 
-    // RUEDITA (scroll)
+    // 🛞 RUEDITA
     if (len >= 4)
     {
       wheel = (int8_t) report[3];
